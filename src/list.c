@@ -71,9 +71,6 @@ list_handle_t list_init() {
   return list;
 }
 
-
-
-
 void list_destroy(list_handle_t list) {
   free(list->container);
   free(list);
@@ -111,19 +108,18 @@ bool list_iter_equal(list_iter_t iter1, list_iter_t iter2) {
   }
   return true;
 }
-bool list_insert_before(list_iter_t iter, double val) {
+void list_insert_before(list_iter_t iter, double val) {
   list_handle_t list = iter.list;
   if (list->container[list->top_element_empty].next == -1) {
     list_grow(iter.list);
   }
-  if (list_iter_equal(iter, list_iter_null(list))) {
-    if (list->first != -1 || list->last != -1) {
-      return false;
-    }
+  if (list_iter_equal(iter, list_iter_null(list)) && list->top_element_empty == 0) {
     list->top_element_empty = list->container[0].next;
     list->container[0] = (list_element_t){val, -1, -1};
+    list->first = 0;
+    list->last = 0;
     list->size++;
-    return true;
+    return;
   }
   if (list->container[iter.list_element_idx].prev == -1) {
     list->first = list->top_element_empty;
@@ -135,9 +131,9 @@ bool list_insert_before(list_iter_t iter, double val) {
   list->container[iter.list_element_idx].prev = list->top_element_empty;
   list->top_element_empty = new_top_elem_empty;
   list->size++;
-  return true;
 }
-bool list_insert_after(list_iter_t iter, double val) {
+
+void list_insert_after(list_iter_t iter, double val) {
   list_handle_t list = iter.list;
   if (list->container[list->top_element_empty].next == -1) {
     list_grow(iter.list);
@@ -148,19 +144,18 @@ bool list_insert_after(list_iter_t iter, double val) {
     list->first = 0;
     list->last = 0;
     list->size++;
-    return true;
+    return;
   }
   if (list->container[iter.list_element_idx].next == -1) {
     list->last = list->top_element_empty;
   }
   int new_top_elem_empty = list->container[list->top_element_empty].next;
   list->container[list->top_element_empty] = (list_element_t){
-    val, iter.list_element_idx,  list->container[iter.list_element_idx].next
+    val, iter.list_element_idx, list->container[iter.list_element_idx].next
   };
   list->container[iter.list_element_idx].next = list->top_element_empty;
   list->top_element_empty = new_top_elem_empty;
   list->size++;
-  return true;
 }
 
 double list_remove(list_iter_t iter) {
@@ -173,7 +168,7 @@ double list_remove(list_iter_t iter) {
   if (elem.next == -1) {
     list->last = elem.prev;
   }
-  if(elem.prev != -1) {
+  if (elem.prev != -1) {
     list->container[elem.prev].next = elem.next;
   }
   list->container[iter.list_element_idx].next = list->top_element_empty;
