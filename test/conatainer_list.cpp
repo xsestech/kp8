@@ -30,7 +30,7 @@ TEST(containerList, testPushPopMany) {
   }
   ASSERT_EQ(list_is_empty(list), false);
   int i = 0;
-  for (list_iter_t iter = list_begin(list); list_iter_equal(iter, list_iter_null(list)); iter = list_iter_next(iter)) {
+  for (list_iter_t iter = list_begin(list); !list_iter_equal(iter, list_iter_null(list)); iter = list_iter_next(iter)) {
     ASSERT_EQ(list_iter_val(iter), i);
     i++;
   }
@@ -77,8 +77,8 @@ TEST(containerList, testComplexRemove) {
       list_remove(tmp);
     }
   }
-  int i = 1;
-  for (iter = list_begin(list); list_iter_equal(iter, list_iter_null(list)); iter = list_iter_next(iter)) {
+  int i = 0;
+  for (iter = list_begin(list); !list_iter_equal(iter, list_iter_null(list)); iter = list_iter_next(iter)) {
     ASSERT_EQ(list_iter_val(iter), i);
     i += 2;
   }
@@ -86,7 +86,7 @@ TEST(containerList, testComplexRemove) {
     list_push_back(list, i);
   }
   i = 1;
-  for (iter = list_begin(list); list_iter_equal(iter, list_iter_null(list)); iter = list_iter_next(iter)) {
+  for (iter = list_begin(list); !list_iter_equal(iter, list_iter_null(list)); iter = list_iter_next(iter)) {
     if (i <= 99) {
       ASSERT_EQ(list_iter_val(iter), i);
       i += 2;

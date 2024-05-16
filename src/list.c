@@ -32,17 +32,25 @@ size_t list_new_capacity(size_t old_capacity) {
   }
   return old_capacity << 1;
 }
-
+/**
+ * Compute new size for realloc
+ * @param list poitner to list
+ * @param new_capacity new capacity of list
+ * @return amount of memory to realloc
+ * @internal
+ */
+size_t list_compute_realloc_size_for_capacity(list_handle_t list, size_t new_capacity) {
+  return new_capacity * sizeof(*(list->container));
+}
 /**
  * Increases list size to new capacity
  * @param list pointer to list
- * @param new_capacity new capacity
  * @internal
  */
 void list_grow(list_handle_t list) {
   size_t old_capacity = list->capacity;
   size_t new_capacity = list_new_capacity(old_capacity);
-  size_t new_data_size = new_capacity * sizeof(*(list->container));
+  size_t new_data_size = list_compute_realloc_size_for_capacity(list, new_capacity);
   if (list->container) {
     list->container = realloc(list->container, new_data_size);
   } else {
@@ -54,9 +62,38 @@ void list_grow(list_handle_t list) {
   }
   list->container[new_capacity - 1].next = -1;
   if (old_capacity != 0) {
-    list->container[list->top_element_empty].next = (int) old_capacity;
+    list->container[list->top_element_empty].next = (int)old_capacity;
   }
   list->capacity = new_capacity;
+}
+/**
+ * Decreases list capacity, when it is half empty
+ * @param list list_ptr
+ * @internal
+ */
+void list_shrink(list_handle_t list) {
+  if (list->size * 2 <= list->capacity && list->size != 0) {
+    size_t new_data_size = list_compute_realloc_size_for_capacity(list, list->size);
+    list_element_t* new_container = malloc(new_data_size);
+    assert(new_container);
+    int i = 0;
+    for (list_iter_t iter = list_begin(list); !list_iter_equal(iter, list_iter_null(list)); iter = list_iter_next(iter)) {
+      list_element_t old_element = list->container[iter.list_element_idx];
+      if (old_element.next != -1) {
+        old_element.next = i + 1;
+      }
+      if (old_element.prev != -1) {
+        old_element.prev = i - 1;
+      }
+      new_container[i] = old_element;
+      i++;
+    }
+    free(list->container);
+    list->container = new_container;
+    list->capacity = list->size;
+    list->first = 0;
+    list->last = --i;
+  }
 }
 
 list_handle_t list_init() {
@@ -113,7 +150,8 @@ void list_insert_before(list_iter_t iter, double val) {
   if (list->container[list->top_element_empty].next == -1) {
     list_grow(iter.list);
   }
-  if (list_iter_equal(iter, list_iter_null(list)) && list->top_element_empty == 0) {
+  if (list_iter_equal(iter, list_iter_null(list)) &&
+      list->top_element_empty == 0) {
     list->top_element_empty = list->container[0].next;
     list->container[0] = (list_element_t){val, -1, -1};
     list->first = 0;
@@ -126,8 +164,7 @@ void list_insert_before(list_iter_t iter, double val) {
   }
   int new_top_elem_empty = list->container[list->top_element_empty].next;
   list->container[list->top_element_empty] = (list_element_t){
-    val, list->container[iter.list_element_idx].prev, iter.list_element_idx
-  };
+      val, list->container[iter.list_element_idx].prev, iter.list_element_idx};
   list->container[iter.list_element_idx].prev = list->top_element_empty;
   list->top_element_empty = new_top_elem_empty;
   list->size++;
@@ -138,7 +175,8 @@ void list_insert_after(list_iter_t iter, double val) {
   if (list->container[list->top_element_empty].next == -1) {
     list_grow(iter.list);
   }
-  if (list_iter_equal(iter, list_iter_null(list)) && list->top_element_empty == 0) {
+  if (list_iter_equal(iter, list_iter_null(list)) &&
+      list->top_element_empty == 0) {
     list->top_element_empty = list->container[0].next;
     list->container[0] = (list_element_t){val, -1, -1};
     list->first = 0;
@@ -151,8 +189,7 @@ void list_insert_after(list_iter_t iter, double val) {
   }
   int new_top_elem_empty = list->container[list->top_element_empty].next;
   list->container[list->top_element_empty] = (list_element_t){
-    val, iter.list_element_idx, list->container[iter.list_element_idx].next
-  };
+      val, iter.list_element_idx, list->container[iter.list_element_idx].next};
   list->container[iter.list_element_idx].next = list->top_element_empty;
   list->top_element_empty = new_top_elem_empty;
   list->size++;
@@ -174,6 +211,7 @@ double list_remove(list_iter_t iter) {
   list->container[iter.list_element_idx].next = list->top_element_empty;
   list->top_element_empty = iter.list_element_idx;
   list->size--;
+  list_shrink(list);
   return elem.value;
 }
 void list_push_back(list_handle_t list, double val) {
@@ -183,9 +221,7 @@ void list_push_front(list_handle_t list, double val) {
   list_insert_before(list_end(list), val);
 }
 
-bool list_is_empty(list_handle_t list) {
-  return list->size == 0;
-}
+bool list_is_empty(list_handle_t list) { return list->size == 0; }
 void list_reverse(list_handle_t list) {
   int current_idx = list->first;
   while (current_idx != -1) {
