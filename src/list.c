@@ -73,11 +73,12 @@ void list_grow(list_handle_t list) {
  */
 void list_shrink(list_handle_t list) {
   if (list->size * 2 <= list->capacity && list->size != 0) {
-    size_t new_data_size = list_compute_realloc_size_for_capacity(list, list->size);
-    list_element_t* new_container = malloc(new_data_size);
+    size_t new_data_size = list_compute_realloc_size_for_capacity(list, list->size + 1);
+    list_element_t *new_container = malloc(new_data_size);
     assert(new_container);
     int i = 0;
-    for (list_iter_t iter = list_begin(list); !list_iter_equal(iter, list_iter_null(list)); iter = list_iter_next(iter)) {
+    for (list_iter_t iter = list_begin(list); !list_iter_equal(iter, list_iter_null(list)); iter =
+         list_iter_next(iter)) {
       list_element_t old_element = list->container[iter.list_element_idx];
       if (old_element.next != -1) {
         old_element.next = i + 1;
@@ -87,10 +88,12 @@ void list_shrink(list_handle_t list) {
       }
       new_container[i] = old_element;
       i++;
-    }
+         }
     free(list->container);
     list->container = new_container;
-    list->capacity = list->size;
+    list->capacity = list->size + 1;
+    list->top_element_empty = list->size;
+    list->container[list->top_element_empty].next = -1;
     list->first = 0;
     list->last = --i;
   }
